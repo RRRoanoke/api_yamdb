@@ -10,7 +10,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Title, Review, Comment
 
 from .permissions import IsAdmin, IsAdminModeratorAuthorOrReadOnly
-from .serializers import SignUpSerializer, TokenSeriliazer, UserSerializer, CommentSerializer
+from .serializers import SignUpSerializer, TokenSeriliazer, UserSerializer, CommentSerializer, ReviewSerialize
 
 User = get_user_model()
 
@@ -101,17 +101,32 @@ def token(request):
 class CommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly, )
+    
+  def perform_create(self, serializer):
+      title_id = self.kwargs.get('title_id')
+      title = get_object_or_404(Title, id=title_id)
+      review_id = self.kwargs.get('review_id')
+      review = get_object_or_404(Review, id=review_id, title=title)
+      serializer.save(author=self.request.user, review=review)
+      
+  def get_queryset(self):
+      title_id = self.kwargs.get('title_id')
+      title = get_object_or_404(Title, id=title_id)
+      review_id = self.kwargs.get('review_id')
+      review = get_object_or_404(Review, id=review_id, title=title)
+      return Comment.objects.filter(review=review)
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
         title = get_object_or_404(Title, id=title_id)
-        review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, id=review_id, title=title)
-        serializer.save(author=self.request.user, review=review)
+        serializer.save(author=self.request.user, title=title)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
         title = get_object_or_404(Title, id=title_id)
-        review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, id=review_id, title=title)
-        return Comment.objects.filter(review=review)
+        return title.reviews.all()
+    
