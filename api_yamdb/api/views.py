@@ -1,16 +1,19 @@
+from django_filters.rest_framework import DjangoFilterBackend
+from .pagination import MyPaginator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, status
+from rest_framework import filters, permissions, status, mixins, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
-from reviews.models import Title, Review, Comment
+from reviews.models import Title, Review, Comment, Categories, Genres, Titles
 
 from .permissions import IsAdmin, IsAdminModeratorAuthorOrReadOnly
-from .serializers import SignUpSerializer, TokenSeriliazer, UserSerializer, CommentSerializer, ReviewSerialize
+from .serializers import SignUpSerializer, TokenSeriliazer, UserSerializer, CommentSerializer, ReviewSerialize, CategorySerializer, GenreSerializer,
+                          TitleSerializer, TitleSafeSerializer
 
 User = get_user_model()
 
@@ -129,4 +132,56 @@ class ReviewViewSet(viewsets.ModelViewSet):
         title_id = self.kwargs.get('title_id')
         title = get_object_or_404(Title, id=title_id)
         return title.reviews.all()
-    
+   
+  
+class ListCreateDeleteViewSet(mixins.ListModelMixin,
+                              mixins.CreateModelMixin,
+                              mixins.DestroyModelMixin,
+                              viewsets.GenericViewSet):
+    pass
+
+
+class CategoryViewSet(ListCreateDeleteViewSet):
+    queryset = Categories.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = (IsAdmin,)
+    pagination_class = MyPaginator
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
+
+    def destroy(self, request, *args, **kwargs):
+        category = get_object_or_404(Categories, slug=kwargs['pk'])
+        if request.user.is_anonymous or request.user.is_superuser: #поменять анонимуса на админа
+            self.perform_destroy(category)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+
+class GenreViewSet(ListCreateDeleteViewSet):
+    queryset = Genres.objects.all()
+    serializer_class = GenreSerializer
+    permission_classes = (IsAdmin,)
+    pagination_class = MyPaginator
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
+
+    def destroy(self, request, *args, **kwargs):
+        genre = get_object_or_404(Genres, slug=kwargs['pk'])
+        if request.user.is_anonymous or request.user.is_superuser:
+            self.perform_destroy(genre)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = Titles.objects.all()
+    permission_classes = (IsAdmin,)
+    pagination_class = MyPaginator
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('category__slug',
+                        'genre__slug', 'name', 'year')
+
+    def get_serializer_class(self):
+        if self.action in ('create', 'partial_update', 'destroy'):
+            return TitleSerializer
+        return TitleSafeSerializer
