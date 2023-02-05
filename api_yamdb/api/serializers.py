@@ -3,6 +3,14 @@ from django.contrib.auth.validators import ASCIIUsernameValidator
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+
+
+from reviews.models import (
+    Review,
+    Comment
+)
 
 User = get_user_model()
 
@@ -57,3 +65,18 @@ class UserSerializer(serializers.ModelSerializer):
             "bio",
             "role",
         )
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    review = serializers.SlugRelatedField(
+        slug_field='text',
+        queryset=Review.objects.all()
+    ),
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True
+    )
+
+    class Meta:
+        fields = ('id', 'text', 'author', 'pub_date')
+        model = Comment
