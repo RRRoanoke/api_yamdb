@@ -3,17 +3,21 @@ from .pagination import MyPaginator
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, status, mixins, viewsets
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
-from reviews.models import Title, Review, Comment, Categories, Genres, Titles
+from reviews.models import Titles, Review, Comment, Categories, Genres, Titles
 
 from .permissions import IsAdmin, IsAdminModeratorAuthorOrReadOnly
-from .serializers import SignUpSerializer, TokenSeriliazer, UserSerializer, CommentSerializer, ReviewSerialize, CategorySerializer, GenreSerializer,
-                          TitleSerializer, TitleSafeSerializer
+from .serializers import (SignUpSerializer, TokenSeriliazer, UserSerializer,
+                          CommentSerializer, ReviewSerializer,
+                          CategorySerializer, GenreSerializer, TitleSerializer,
+                          TitleSafeSerializer)
+from .mixins import ListCreateDeleteViewSet
+
 
 User = get_user_model()
 
@@ -101,44 +105,38 @@ def token(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CommentViewSet(ModelViewSet):
-    serializer_class = CommentSerializer
-    permission_classes = (IsAdminModeratorAuthorOrReadOnly, )
-    
-  def perform_create(self, serializer):
-      title_id = self.kwargs.get('title_id')
-      title = get_object_or_404(Title, id=title_id)
-      review_id = self.kwargs.get('review_id')
-      review = get_object_or_404(Review, id=review_id, title=title)
-      serializer.save(author=self.request.user, review=review)
-      
-  def get_queryset(self):
-      title_id = self.kwargs.get('title_id')
-      title = get_object_or_404(Title, id=title_id)
-      review_id = self.kwargs.get('review_id')
-      review = get_object_or_404(Review, id=review_id, title=title)
-      return Comment.objects.filter(review=review)
-
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
+        title = get_object_or_404(Titles, id=title_id)
         serializer.save(author=self.request.user, title=title)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
+        title = get_object_or_404(Titles, id=title_id)
         return title.reviews.all()
-   
-  
-class ListCreateDeleteViewSet(mixins.ListModelMixin,
-                              mixins.CreateModelMixin,
-                              mixins.DestroyModelMixin,
-                              viewsets.GenericViewSet):
-    pass
+
+
+class CommentViewSet(ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = (IsAdminModeratorAuthorOrReadOnly, )
+
+    def perform_create(self, serializer):
+        title_id = self.kwargs.get('title_id')
+        title = get_object_or_404(Titles, id=title_id)
+        review_id = self.kwargs.get('review_id')
+        review = get_object_or_404(Review, id=review_id, title=title)
+        serializer.save(author=self.request.user, review=review)
+
+    def get_queryset(self):
+        title_id = self.kwargs.get('title_id')
+        title = get_object_or_404(Titles, id=title_id)
+        review_id = self.kwargs.get('review_id')
+        review = get_object_or_404(Review, id=review_id, title=title)
+        return Comment.objects.filter(review=review)
 
 
 class CategoryViewSet(ListCreateDeleteViewSet):
@@ -151,10 +149,8 @@ class CategoryViewSet(ListCreateDeleteViewSet):
 
     def destroy(self, request, *args, **kwargs):
         category = get_object_or_404(Categories, slug=kwargs['pk'])
-        if request.user.is_anonymous or request.user.is_superuser: #поменять анонимуса на админа
-            self.perform_destroy(category)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_403_FORBIDDEN)
+        self.perform_destroy(category)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class GenreViewSet(ListCreateDeleteViewSet):
@@ -167,10 +163,8 @@ class GenreViewSet(ListCreateDeleteViewSet):
 
     def destroy(self, request, *args, **kwargs):
         genre = get_object_or_404(Genres, slug=kwargs['pk'])
-        if request.user.is_anonymous or request.user.is_superuser:
-            self.perform_destroy(genre)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_403_FORBIDDEN)
+        self.perform_destroy(genre)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TitleViewSet(viewsets.ModelViewSet):

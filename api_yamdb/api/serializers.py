@@ -4,7 +4,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 
-from reviews.models import Review, Title, Comment, Categories, Genres, Titles
+from reviews.models import Review, Titles, Comment, Categories, Genres, Titles
 from django.contrib.auth.validators import ASCIIUsernameValidator
 from rest_framework.validators import UniqueValidator
 
@@ -14,7 +14,7 @@ User = get_user_model()
 class ReviewSerializer(serializers.ModelSerializer):
     title = serializers.SlugRelatedField(
         slug_field='name',
-        queryset=Title.objects.all()
+        queryset=Titles.objects.all()
     ),
     author = serializers.SlugRelatedField(
         read_only=True,
@@ -30,7 +30,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         request = self.context['request']
         author = request.user
         title_id = self.context.get('view').kwargs.get('title_id')
-        title = get_object_or_404(Title, pk=title_id)
+        title = get_object_or_404(Titles, pk=title_id)
         if (
             request.method == 'POST'
             and Review.objects.filter(title=title, author=author).exists()
@@ -42,7 +42,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'score', 'pub_date',)
         model = Review
 
-        
+
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True, max_length=254)
     username = serializers.RegexField(
@@ -109,7 +109,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
         model = Comment
 
-        
+
 class CategorySerializer(serializers.ModelSerializer):
     name = serializers.CharField()
     slug = serializers.CharField()
