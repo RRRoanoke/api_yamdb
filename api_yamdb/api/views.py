@@ -1,6 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from .pagination import MyPaginator
 from django.contrib.auth import get_user_model
+from django.db.models import Avg, fields, ExpressionWrapper
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, permissions, status, viewsets
@@ -9,7 +10,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
-from reviews.models import Titles, Review, Comment, Categories, Genres, Titles
+from reviews.models import Title, Review, Comment, Category, Genre
 
 from .permissions import IsAdmin, IsAdminModeratorAuthorOrReadOnly
 from .serializers import (SignUpSerializer, TokenSeriliazer, UserSerializer,
@@ -111,12 +112,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
+        title = get_object_or_404(Title, id=title_id)
         serializer.save(author=self.request.user, title=title)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
+        title = get_object_or_404(Title, id=title_id)
         return title.reviews.all()
 
 
@@ -126,50 +127,52 @@ class CommentViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
+        title = get_object_or_404(Title, id=title_id)
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id, title=title)
         serializer.save(author=self.request.user, review=review)
 
     def get_queryset(self):
         title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Titles, id=title_id)
+        title = get_object_or_404(Title, id=title_id)
         review_id = self.kwargs.get('review_id')
         review = get_object_or_404(Review, id=review_id, title=title)
         return Comment.objects.filter(review=review)
 
 
 class CategoryViewSet(ListCreateDeleteViewSet):
-    queryset = Categories.objects.all()
+    queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdmin,)
     pagination_class = MyPaginator
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
 
     def destroy(self, request, *args, **kwargs):
-        category = get_object_or_404(Categories, slug=kwargs['pk'])
+        category = get_object_or_404(Category, slug=kwargs['pk'])
         self.perform_destroy(category)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class GenreViewSet(ListCreateDeleteViewSet):
-    queryset = Genres.objects.all()
+    queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdmin,)
     pagination_class = MyPaginator
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
 
     def destroy(self, request, *args, **kwargs):
-        genre = get_object_or_404(Genres, slug=kwargs['pk'])
+        genre = get_object_or_404(Genre, slug=kwargs['pk'])
         self.perform_destroy(genre)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Titles.objects.all()
-    permission_classes = (IsAdmin,)
+    queryset = Title.objects.prefetch_related("reviews").annotate(
+        rating=ExpressionWrapper(
+            Avg("reviews__score"),
+            output_field=fields.IntegerField()
+        )
+    )
     pagination_class = MyPaginator
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('category__slug',

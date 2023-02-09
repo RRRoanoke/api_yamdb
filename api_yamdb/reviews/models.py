@@ -43,10 +43,20 @@ class User(AbstractUser):
     )
     is_active = models.BooleanField(default=True)
 
+    
+    @property
+    def is_admin(self):
+        return self.role == Role.ADMIN or self.is_superuser
+    
+    @property
+    def is_moderator(self):
+        return self.role == Role.MODERATOR
+
+
     REQUIRED_FIELDS = ["email"]
 
 
-class Categories(models.Model):
+class Category(models.Model):
     name = models.CharField(max_length=256, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -54,7 +64,7 @@ class Categories(models.Model):
         return self.name
 
 
-class Genres(models.Model):
+class Genre(models.Model):
     name = models.CharField(max_length=256, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -62,17 +72,17 @@ class Genres(models.Model):
         return self.name
 
 
-class Titles(models.Model):
+class Title(models.Model):
     name = models.CharField(max_length=256)
     year = models.PositiveSmallIntegerField()
     description = models.TextField(blank=True, null=True)
     genre = models.ManyToManyField(
-        Genres,
+        Genre,
         related_name='titles',
-        through='TitlesGenres',
+        through='TitleGenre',
     )
     category = models.ForeignKey(
-        Categories,
+        Category,
         on_delete=models.SET_NULL,
         related_name='titles',
         null=True
@@ -88,7 +98,7 @@ class Titles(models.Model):
 
 class Review(models.Model):
     title = models.ForeignKey(
-        Titles,
+        Title,
         on_delete=models.CASCADE,
         related_name='reviews',
         verbose_name='произведение'
@@ -153,9 +163,9 @@ class Comment(models.Model):
         return self.text
 
 
-class TitlesGenres(models.Model):
-    genre = models.ForeignKey(Genres, on_delete=models.CASCADE)
-    title = models.ForeignKey(Titles, on_delete=models.CASCADE)
+class TitleGenre(models.Model):
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
+    title = models.ForeignKey(Title, on_delete=models.CASCADE)
 
     def __str__(self):
         return f'{self.genre} {self.title}'
