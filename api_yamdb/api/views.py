@@ -12,7 +12,8 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
 from reviews.models import Title, Review, Comment, Category, Genre
 
-from .permissions import IsAdmin, IsAdminModeratorAuthorOrReadOnly
+from .filters import MyTitleFilter
+from .permissions import IsAdmin, IsAdminModeratorAuthorOrReadOnly, IsAdminOrReadOnly
 from .serializers import (SignUpSerializer, TokenSeriliazer, UserSerializer,
                           CommentSerializer, ReviewSerializer,
                           CategorySerializer, GenreSerializer, TitleSerializer,
@@ -141,8 +142,9 @@ class CommentViewSet(ModelViewSet):
 
 
 class CategoryViewSet(ListCreateDeleteViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.get_queryset().order_by('id')
     serializer_class = CategorySerializer
+    permission_classes = (IsAdminOrReadOnly,)
     pagination_class = MyPaginator
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
@@ -154,9 +156,10 @@ class CategoryViewSet(ListCreateDeleteViewSet):
 
 
 class GenreViewSet(ListCreateDeleteViewSet):
-    queryset = Genre.objects.all()
+    queryset = Genre.objects.get_queryset().order_by('id')
     serializer_class = GenreSerializer
-    pagination_class = MyPaginator
+    pagination_class = LimitOffsetPagination
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
 
@@ -173,10 +176,10 @@ class TitleViewSet(viewsets.ModelViewSet):
             output_field=fields.IntegerField()
         )
     )
-    pagination_class = MyPaginator
-    filter_backends = (DjangoFilterBackend,)
-    filterset_fields = ('category__slug',
-                        'genre__slug', 'name', 'year')
+    pagination_class = LimitOffsetPagination
+    permission_classes = (IsAdminOrReadOnly,)
+    filterset_class = MyTitleFilter
+
 
     def get_serializer_class(self):
         if self.action in ('create', 'partial_update', 'destroy'):
