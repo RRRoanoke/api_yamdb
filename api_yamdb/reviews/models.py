@@ -140,10 +140,11 @@ class Review(models.Model):
     def __str__(self) -> str:
         return self.text
 
-      
+
 class Categories(models.Model):
     name = models.CharField(max_length=256, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
+
 
 class Comment(models.Model):
     review = models.ForeignKey(
