@@ -1,10 +1,9 @@
-from django.db import models
 from django.core.validators import (
     MinLengthValidator,
-    MaxValueValidator
-)
+    MaxValueValidator)
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import ASCIIUsernameValidator
+from django.db import models
 
 
 class Role:
@@ -43,15 +42,13 @@ class User(AbstractUser):
     )
     is_active = models.BooleanField(default=True)
 
-    
     @property
     def is_admin(self):
         return self.role == Role.ADMIN or self.is_superuser
-    
+
     @property
     def is_moderator(self):
         return self.role == Role.MODERATOR
-
 
     REQUIRED_FIELDS = ["email"]
 

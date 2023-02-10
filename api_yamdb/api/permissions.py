@@ -1,4 +1,5 @@
 from rest_framework import permissions
+
 from reviews.models import Role
 
 
@@ -27,7 +28,8 @@ class IsAdminModeratorAuthorOrReadOnly(permissions.BasePermission):
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         user = request.user
-        return (request.method in permissions.SAFE_METHODS
-                or (user.is_authenticated and
-                    (user.is_admin or user.is_superuser))
+        return (request.method
+                in permissions.SAFE_METHODS
+                or (user.is_authenticated
+                    and (user.is_admin or user.is_superuser))
                 )

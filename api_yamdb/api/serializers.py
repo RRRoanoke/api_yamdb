@@ -1,12 +1,12 @@
 import datetime as dt
-from django.core.exceptions import ValidationError
 from rest_framework import serializers
+
+from rest_framework.validators import UniqueValidator
+from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.validators import ASCIIUsernameValidator
 
 from reviews.models import Review, Title, Comment, Category, Genre
-from django.contrib.auth.validators import ASCIIUsernameValidator
-from rest_framework.validators import UniqueValidator
 
 User = get_user_model()
 
@@ -29,7 +29,8 @@ class ReviewSerializer(serializers.ModelSerializer):
         title_id = self.context.get('view').kwargs.get('title_id')
         if (
             request.method == 'POST'
-            and Review.objects.filter(title_id=title_id, author=author).exists()
+            and Review.objects.filter(title_id=title_id,
+                                      author=author).exists()
         ):
             raise ValidationError('Отзыв уже оставлен')
         return data
