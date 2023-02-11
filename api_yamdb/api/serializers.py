@@ -123,6 +123,7 @@ class TitleSafeSerializer(serializers.ModelSerializer):
     category = CategorySerializer(many=False)
     genre = GenreSerializer(many=True)
     rating = serializers.IntegerField(read_only=True, initial=0)
+    year = serializers.IntegerField(validators=(validate_year,))
 
     class Meta:
         fields = '__all__'
@@ -135,10 +136,8 @@ class TitleSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(slug_field='slug',
                                          many=True,
                                          queryset=Genre.objects.all())
+    year = serializers.IntegerField(validators=(validate_year,))
 
     class Meta:
         fields = '__all__'
         model = Title
-
-    def validate_year(self, value):
-        return validate_year(value)
