@@ -43,7 +43,7 @@ class UserViewSet(ModelViewSet):
         url_path="me",
         permission_classes=[
             permissions.IsAuthenticated,
-        ],  # todo нужно ли
+        ],
     )
     def get_current_user(self, request):
         if request.method == "GET":
@@ -63,10 +63,10 @@ def signup(request):
     serializer.is_valid(raise_exception=True)
 
     username_exists = User.objects.filter(
-        username=serializer._validated_data["username"]
+        username=serializer.validated_data["username"]
     ).exists()
     email_exists = User.objects.filter(
-        email=serializer._validated_data["email"]
+        email=serializer.validated_data["email"]
     ).exists()
     if email_exists and not username_exists:
         return Response(
@@ -77,7 +77,7 @@ def signup(request):
             {"detail": "username exist"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    user, flag = User.objects.get_or_create(
+    user = User.objects.get_or_create(
         username=serializer.validated_data["username"],
         email=serializer.validated_data["email"],
     )
