@@ -4,6 +4,9 @@ from django.core.validators import (
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import ASCIIUsernameValidator
 from django.db import models
+from django.db.models import TextField
+
+from api.validation import validate_year
 
 
 class Role:
@@ -57,27 +60,27 @@ class Category(models.Model):
     name = models.CharField(max_length=256, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         ordering = ('id', )
+
+    def __str__(self):
+        return self.name
 
 
 class Genre(models.Model):
     name = models.CharField(max_length=256, unique=True)
     slug = models.SlugField(max_length=50, unique=True)
 
-    def __str__(self):
-        return self.name
-
     class Meta:
         ordering = ('id', )
+
+    def __str__(self):
+        return self.name
 
 
 class Title(models.Model):
     name = models.CharField(max_length=256)
-    year = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField(validators=[validate_year])
     description = models.TextField(blank=True, null=True)
     genre = models.ManyToManyField(
         Genre,
@@ -137,13 +140,8 @@ class Review(models.Model):
         verbose_name_plural = 'Отзывы'
         ordering = ('-pub_date', )
 
-    def __str__(self) -> str:
+    def __str__(self) -> TextField:
         return self.text
-
-
-class Categories(models.Model):
-    name = models.CharField(max_length=256, unique=True)
-    slug = models.SlugField(max_length=50, unique=True)
 
 
 class Comment(models.Model):
@@ -176,8 +174,8 @@ class TitleGenre(models.Model):
     genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
 
-    def __str__(self):
-        return f'{self.genre} {self.title}'
-
     class Meta:
         ordering = ('id', )
+
+    def __str__(self):
+        return f'{self.genre} {self.title}'

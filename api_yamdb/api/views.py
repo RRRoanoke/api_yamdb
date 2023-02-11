@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.db.models import Avg, fields, ExpressionWrapper
+from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action, api_view
@@ -9,18 +10,17 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
 
-from .filters import MyTitleFilter
-from .mixins import ListCreateDeleteViewSet
-from .pagination import MyPaginator
-from .permissions import (IsAdmin,
-                          IsAdminModeratorAuthorOrReadOnly,
-                          IsAdminOrReadOnly)
+from api.filters import MyTitleFilter
+from api.mixins import ListCreateDeleteViewSet
+from api.pagination import MyPaginator
+from api.permissions import (IsAdmin,
+                             IsAdminModeratorAuthorOrReadOnly,
+                             IsAdminOrReadOnly)
+from api.serializers import (SignUpSerializer, TokenSeriliazer, UserSerializer,
+                             CommentSerializer, ReviewSerializer,
+                             CategorySerializer, GenreSerializer,
+                             TitleSerializer, TitleSafeSerializer)
 from reviews.models import Title, Review, Comment, Category, Genre
-from .serializers import (SignUpSerializer, TokenSeriliazer, UserSerializer,
-                          CommentSerializer, ReviewSerializer,
-                          CategorySerializer, GenreSerializer, TitleSerializer,
-                          TitleSafeSerializer)
-
 
 User = get_user_model()
 
@@ -125,7 +125,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = (IsAdminModeratorAuthorOrReadOnly, )
+    permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
@@ -171,32 +171,16 @@ class GenreViewSet(ListCreateDeleteViewSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-
+    queryset = Title.objects.prefetch_related("reviews").annotate(
+        rating=ExpressionWrapper(
+            Avg("reviews__score"),
+            output_field=fields.IntegerField()
+        )
+    )
     pagination_class = LimitOffsetPagination
     permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = MyTitleFilter
-
-    def get_queryset(self):
-        queryset = Title.objects.all()
-        genre = self.request.query_params.get('genre')
-        if genre:
-            return queryset.filter(genre__slug__contains=genre)
-        category = self.request.query_params.get('category')
-        if category:
-            return queryset.filter(category__slug=category)
-        year = self.request.query_params.get('year')
-        if year:
-            return queryset.filter(year=year)
-        name = self.request.query_params.get('name')
-        if name:
-            return queryset.filter(name=name)
-        queryset = Title.objects.prefetch_related("reviews").annotate(
-            rating=ExpressionWrapper(
-                Avg("reviews__score"),
-                output_field=fields.IntegerField()
-            )
-        )
-        return queryset
 
     def get_serializer_class(self):
         if self.action in ('create', 'partial_update', 'destroy'):

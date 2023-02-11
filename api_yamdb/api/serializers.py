@@ -1,4 +1,3 @@
-import datetime as dt
 from rest_framework import serializers
 
 from rest_framework.validators import UniqueValidator
@@ -6,7 +5,8 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth.validators import ASCIIUsernameValidator
 
-from reviews.models import Review, Title, Comment, Category, Genre
+from api.validation import validate_year
+from reviews.models import Comment, Category, Genre, Review, Title
 
 User = get_user_model()
 
@@ -18,6 +18,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         slug_field='username'
     )
 
+    class Meta:
+        fields = ('id', 'text', 'author', 'score', 'pub_date',)
+        model = Review
+
     def validate_score(self, value):
         if value < 0 or value > 10:
             raise serializers.ValidationError('Введите значение от 1 до 10')
@@ -28,16 +32,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         author = request.user
         title_id = self.context.get('view').kwargs.get('title_id')
         if (
-            request.method == 'POST'
-            and Review.objects.filter(title_id=title_id,
-                                      author=author).exists()
+                request.method == 'POST'
+                and Review.objects.filter(title_id=title_id,
+                                          author=author).exists()
         ):
             raise ValidationError('Отзыв уже оставлен')
         return data
-
-    class Meta:
-        fields = ('id', 'text', 'author', 'score', 'pub_date',)
-        model = Review
 
 
 class SignUpSerializer(serializers.Serializer):
@@ -108,14 +108,12 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
     class Meta:
         fields = ('name', 'slug')
         model = Category
 
 
 class GenreSerializer(serializers.ModelSerializer):
-
     class Meta:
         fields = ('name', 'slug')
         model = Genre
@@ -138,12 +136,9 @@ class TitleSerializer(serializers.ModelSerializer):
                                          many=True,
                                          queryset=Genre.objects.all())
 
-    def validate_year(self, value):
-        year = dt.date.today().year
-        if value > year:
-            raise serializers.ValidationError('Неправильный год выпуска')
-        return value
-
     class Meta:
         fields = '__all__'
         model = Title
+
+    def validate_year(self, value):
+        return validate_year(value)

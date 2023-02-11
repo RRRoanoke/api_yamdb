@@ -1,54 +1,49 @@
+import csv
+
+from pathlib import Path
 from django.core.management.base import BaseCommand
 
-import pandas as pd
+from reviews.models import (Category, Genre,
+                            Title, TitleGenre,
+                            User, Review, Comment)
 
-from reviews.models import Category, Genre, Title, TitleGenre
+BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+FILES_MODELS = {'users.csv': User,
+                'category.csv': Category,
+                'genre.csv': Genre,
+                'titles.csv': Title,
+                'genre_title.csv': TitleGenre,
+                'review.csv': Review,
+                'comments.csv': Comment}
+
+INSTANCE_FIELDS = {'category': Category,
+                   'author': User,
+                   'title': Title,
+                   'review': Review}
 
 
 class Command(BaseCommand):
-
-    def add_arguments(self, parser):
-        pass
+    """Скрипт загрузки в базу данных в формате csv.
+    Запуск командой: python manage.py load_db
+    """
 
     def handle(self, *args, **options):
-        title = pd.read_csv(
-            r'F:\Deev\api_yamdb\api_yamdb\static\data\titles.csv')
-        for id, name, year, category in zip(
-                title.id, title.name, title.year, title.category):
-            models = Title(
-                id=id, name=name, year=year,
-                category=Category(pk=category))
-            models.save()
-
-        cat_file = pd.read_csv(
-            r'F:\Deev\api_yamdb\api_yamdb\static\data\category.csv')
-        for id, name, slug in zip(
-                cat_file.id, cat_file.name, cat_file.slug):
-            models = Category(id=id, name=name, slug=slug)
-            models.save()
-
-        genre = pd.read_csv(
-            r'F:\Deev\api_yamdb\api_yamdb\static\data\genre.csv')
-        for id, name, slug in zip(
-                genre.id, genre.name, genre.slug):
-            models = Genre(id=id, name=name, slug=slug)
-            models.save()
-
-        with open(
-                r'F:\Deev\api_yamdb\api_yamdb\static\data\genre_title.csv'
-        ) as file:
-            genre_title = pd.read_csv(file)
-            for id, title_id, genre_id in zip(
-                    genre_title.id,
-                    genre_title.title_id,
-                    genre_title.genre_id):
-                models = TitleGenre(
-                    id=id, title=Title(pk=title_id), genre=Genre(pk=genre_id))
-                models.save()
-
-        genre = pd.read_csv(
-            r'F:\Deev\api_yamdb\api_yamdb\static\data\genre.csv')
-        for id, name, slug in zip(
-                genre.id, genre.name, genre.slug):
-            models = Genre(id=id, name=name, slug=slug)
-            models.save()
+        for name, model in FILES_MODELS.items():
+            with open(
+                    fr'{BASE_DIR}\static\data\{name}',
+                    encoding='utf-8') as file:
+                reader = csv.reader(file)
+                fields = next(reader)
+                for line in reader:
+                    new_obj = model()
+                    i = 0
+                    for item in line:
+                        key = fields[i]
+                        if key in INSTANCE_FIELDS:
+                            setattr(
+                                new_obj, key, INSTANCE_FIELDS[key](pk=item)
+                            )
+                        else:
+                            setattr(new_obj, key, item)
+                        i += 1
+                    new_obj.save()
