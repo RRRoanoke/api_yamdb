@@ -77,7 +77,7 @@ def signup(request):
             {"detail": "username exist"}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    user = User.objects.get_or_create(
+    user, _ = User.objects.get_or_create(
         username=serializer.validated_data["username"],
         email=serializer.validated_data["email"],
     )
