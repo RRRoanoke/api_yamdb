@@ -45,7 +45,6 @@ class SignUpSerializer(serializers.Serializer):
     username = serializers.RegexField(
         regex=r"^[\w.@+-]+\Z",
         required=True,
-        validators=(ASCIIUsernameValidator,),
         max_length=150,
     )
 
@@ -74,7 +73,6 @@ class UserSerializer(serializers.ModelSerializer):
         regex=r"^[\w.@+-]+\Z",
         required=True,
         validators=(
-            ASCIIUsernameValidator,
             UniqueValidator(queryset=User.objects.all()),
         ),
         max_length=150,
