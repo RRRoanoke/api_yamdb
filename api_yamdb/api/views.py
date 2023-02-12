@@ -108,19 +108,25 @@ def token(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+def get_value(self, field, title=None):
+    value_id = self.kwargs.get(f'{field}')
+    if title:
+        value = get_object_or_404(Review, id=value_id, title=title)
+        return value
+    value = get_object_or_404(Title, id=value_id)
+    return value
+
+
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
+        title = get_value(self, 'title_id')
         serializer.save(author=self.request.user, title=title)
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
-        return title.reviews.all()
+        return get_value(self, 'title_id').reviews.all()
 
 
 class CommentViewSet(ModelViewSet):
@@ -128,17 +134,13 @@ class CommentViewSet(ModelViewSet):
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
-        review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, id=review_id, title=title)
+        title = get_value(self, 'title_id')
+        review = get_value(self, 'review_id', title=title)
         serializer.save(author=self.request.user, review=review)
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, id=title_id)
-        review_id = self.kwargs.get('review_id')
-        review = get_object_or_404(Review, id=review_id, title=title)
+        title = get_value(self, 'title_id')
+        review = get_value(self, 'review_id', title=title)
         return Comment.objects.filter(review=review)
 
 
