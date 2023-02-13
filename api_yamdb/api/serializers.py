@@ -8,7 +8,9 @@ from django.contrib.auth.validators import ASCIIUsernameValidator
 from api.validation import validate_year
 from reviews.models import Comment, Category, Genre, Review, Title
 
+
 User = get_user_model()
+REGEX = r"^[\w.@+-]+\Z"
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -43,7 +45,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True, max_length=254)
     username = serializers.RegexField(
-        regex=r"^[\w.@+-]+\Z",
+        REGEX,
         required=True,
         max_length=150,
     )
@@ -70,7 +72,7 @@ class UserSerializer(serializers.ModelSerializer):
         ],
     )
     username = serializers.RegexField(
-        regex=r"^[\w.@+-]+\Z",
+        REGEX,
         required=True,
         validators=(
             UniqueValidator(queryset=User.objects.all()),
