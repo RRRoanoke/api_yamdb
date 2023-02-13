@@ -22,6 +22,7 @@ from api.serializers import (SignUpSerializer, TokenSeriliazer, UserSerializer,
                              TitleSerializer, TitleSafeSerializer)
 from reviews.models import Title, Review, Comment, Category, Genre
 
+
 User = get_user_model()
 
 
@@ -122,8 +123,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
-        title = get_value(self, 'title_id')
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user,
+                        title=get_value(self, 'title_id'))
 
     def get_queryset(self):
         return get_value(self, 'title_id').reviews.all()
@@ -133,15 +134,15 @@ class CommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = (IsAdminModeratorAuthorOrReadOnly,)
 
-    def perform_create(self, serializer):
+    def review(self):
         title = get_value(self, 'title_id')
-        review = get_value(self, 'review_id', title=title)
-        serializer.save(author=self.request.user, review=review)
+        return get_value(self, 'review_id', title=title)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, review=self.review())
 
     def get_queryset(self):
-        title = get_value(self, 'title_id')
-        review = get_value(self, 'review_id', title=title)
-        return Comment.objects.filter(review=review)
+        return Comment.objects.filter(review=self.review())
 
 
 class CategoryViewSet(ListCreateDeleteViewSet):
