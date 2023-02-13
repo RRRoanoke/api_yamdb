@@ -36,14 +36,12 @@ class Command(BaseCommand):
                 fields = next(reader)
                 for line in reader:
                     new_obj = model()
-                    i = 0
-                    for item in line:
-                        key = fields[i]
+                    for count, item in enumerate(line):
+                        key = fields[count]
                         if key in INSTANCE_FIELDS:
                             setattr(
                                 new_obj, key, INSTANCE_FIELDS[key](pk=item)
                             )
                         else:
                             setattr(new_obj, key, item)
-                        i += 1
                     new_obj.save()
